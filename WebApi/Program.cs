@@ -8,7 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<IElectricyPriceService, ElectricyPriceService>();
+builder.Services.AddHttpClient();
+
+builder.Services.AddSingleton<IElectricityPriceService, ElectricityPriceService>();
 
 var app = builder.Build();
 
@@ -21,7 +23,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/electricityprice_zone", async ([FromServices] IElectricyPriceService priceService,
+app.MapGet("/electricityprice_zone", async ([FromServices] IElectricityPriceService priceService,
     DateTime date, string zone) =>
 {
     var items = await priceService.Get(date, zone);

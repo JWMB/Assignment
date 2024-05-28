@@ -22,7 +22,7 @@ namespace Tests
             // Arrange
             var client = factory.CreateClient();
 
-            var date = DateTime.Today;
+            var date = new DateTime(2024, 1, 1);
             var zone = "SE1";
 
             // Act
@@ -31,7 +31,7 @@ namespace Tests
             // Assert
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<Response>();
-            result.Min.ShouldBe(1);
+            result.Min.ShouldBe(0.02123M);
         }
 
         [Fact]
@@ -39,10 +39,10 @@ namespace Tests
         {
             // Arrange
             var client = Utils.CreateClient(factory, services => {
-                var service = A.Fake<IElectricyPriceService>();
+                var service = A.Fake<IElectricityPriceService>();
                 A.CallTo(() => service.Get(A<DateTime>._, A<string>._))
                     .Returns(Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(1, 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
-                services.AddScoped<IElectricyPriceService>(sp => service);
+                services.AddScoped<IElectricityPriceService>(sp => service);
             });
 
             var date = DateTime.Today;
