@@ -16,12 +16,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/electricityprice_zone", () =>
+app.MapGet("/electricityprice_zone", (
+    DateTime date, string zone) =>
 {
-    return string.Empty;
+    return new Response(1, 1, 1, "SEK");
 })
 .WithOpenApi();
 
 app.Run();
 
 public partial class Program { } // For exposing to tests
+
+public readonly record struct Response(decimal Min, decimal Max, decimal Avg, string Unit);

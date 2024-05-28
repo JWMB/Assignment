@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Shouldly;
+using System.Net.Http.Json;
 
 namespace Tests
 {
@@ -25,6 +27,8 @@ namespace Tests
 
             // Assert
             response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<Response>();
+            result.Min.ShouldBe(1);
         }
     }
 }
