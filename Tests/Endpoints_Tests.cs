@@ -62,6 +62,24 @@ namespace Tests
             content.Max.ShouldBe(currency == Currency.EUR ? 99 : 55);
         }
 
+        [Fact]
+        public async Task Coords_Get_Integration()
+        {
+            // Arrange
+            var client = factory.CreateClient();
+
+            var date = new DateTime(2024, 1, 1);
+            var coords = new Coordinate(5, 5);
+            // Act
+            var response = await client.GetAsync($"/electricityprice_coords?date={date:yyyy-MM-dd}&longitude={coords.Longitude}&latitude={coords.Latitude}");
+
+            // Assert
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<Response>();
+            result.Min.ShouldBe(0.02123M);
+            result.Hourly.Count.ShouldBe(24);
+        }
+
         [Theory]
         [InlineData("SE1", 98)]
         [InlineData("SE2", 97)]
@@ -69,17 +87,16 @@ namespace Tests
         {
             // Arrange
             var client = Utils.CreateClient(factory, services => {
-                var priceService = A.Fake<IElectricityPriceService>();
-                A.CallTo(() => priceService.Get(A<DateTime>._, A<string>._))
-                    .ReturnsLazily((DateTime date, string zone) => 
-                    Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(55, foundZone == zone ? (double)expectedMax : 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
-                services.AddScoped(sp => priceService);
-
                 var coordsService = A.Fake<ICoordinateToZoneService>();
                 A.CallTo(() => coordsService.Get(A<Coordinate>._))
                     .Returns(Task.FromResult((string?)foundZone));
                 services.AddScoped(sp => coordsService);
 
+                var priceService = A.Fake<IElectricityPriceService>();
+                A.CallTo(() => priceService.Get(A<DateTime>._, A<string>._))
+                    .ReturnsLazily((DateTime date, string zone) => 
+                    Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(55, foundZone == zone ? (double)expectedMax : 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
+                services.AddScoped(sp => priceService);
             });
 
             var date = DateTime.Today;
