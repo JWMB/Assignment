@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System;
 using WebApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,14 +25,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapGet("/electricityprice_zone", async ([FromServices] IElectricityPriceService priceService,
-    DateTime date, string zone) =>
+    DateTime date, string zone, Response.Currency currency = Response.Currency.EUR) =>
 {
     var items = await priceService.Get(date, zone);
-    return new Response(
-        (decimal)items.Min(o => o.EUR_per_kWh),
-        (decimal)items.Max(o => o.EUR_per_kWh),
-        (decimal)items.Average(o => o.EUR_per_kWh),
-        "EUR");
+    return Response.Create(items, currency);
 })
 .WithOpenApi();
 
@@ -39,4 +36,20 @@ app.Run();
 
 public partial class Program { } // For exposing to tests
 
-public readonly record struct Response(decimal Min, decimal Max, decimal Avg, string Unit);
+public readonly record struct Response(decimal Min, decimal Max, decimal Avg, Dictionary<int, decimal> Hourly)
+{
+    public enum Currency { EUR, SEK };
+
+    public static Response Create(IEnumerable<ElectricyPriceRecord> items, Currency currency)
+    {
+        var getVal = (ElectricyPriceRecord item) => currency == Currency.SEK ? item.SEK_per_kWh : item.EUR_per_kWh;
+        return new Response(
+            (decimal)items.Min(getVal),
+            (decimal)items.Max(getVal),
+            (decimal)items.Average(getVal),
+            items
+                .GroupBy(o => o.time_start.Hour)
+                .ToDictionary(o => o.Key, o => (decimal)o.Select(getVal).Average())
+                );
+    }
+}

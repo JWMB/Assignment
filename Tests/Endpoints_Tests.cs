@@ -32,6 +32,7 @@ namespace Tests
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<Response>();
             result.Min.ShouldBe(0.02123M);
+            result.Hourly.Count.ShouldBe(24);
         }
 
         [Fact]
