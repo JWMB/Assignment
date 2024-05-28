@@ -1,9 +1,9 @@
 ﻿using GeoLibrary.Model;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using static WebApi.CoordinateToZoneService;
+using static WebApi.Services.CoordinateToZoneService;
 
-namespace WebApi
+namespace WebApi.Services
 {
     public interface ICoordinateToZoneService
     {
@@ -16,6 +16,7 @@ namespace WebApi
     {
         Task<List<Converted>> Get();
     }
+
     public class GeoJsonZoneDefinitionProvider : IZoneDefinitionProvider
     {
         private List<Converted>? converted;
@@ -57,33 +58,37 @@ namespace WebApi
             return found.Any() ? found.Single().Id : null;
         }
 
-        public record Converted(string Id, List<Polygon> Polygons)
+        public record MyPolygon(IEnumerable<Point> Points)
+        {
+            public Polygon Polygon => new Polygon(Points);
+        }
+
+        public record Converted(string Id, List<MyPolygon> Polygons) // Polygon type doesn't give easy access to internal Points?!
         {
             public static Converted Create(Feature feature)
             {
                 return new Converted(
                     $"SE{feature.Id}",
-                    (feature.Geometry.Type == "MultiPolygon" 
+                    (feature.Geometry.Type == "MultiPolygon"
                         ? feature.Geometry.Coordinates.SelectMany(CreateMultiPolygons)
                         : feature.Geometry.Coordinates.Select(CreatePolygon)
                     ).ToList()
                     );
 
-                List<Polygon> CreateMultiPolygons(List<List<object>> data) =>
-                    //data.Select(o => new Polygon(o.Select(p => p as List<object>).Select(p => new[] { p[0], p[1] }.Cast<JsonElement>().Cast<object>().ToList()).Select(x => CreatePoint(x)))).ToList();
+                List<MyPolygon> CreateMultiPolygons(List<List<object>> data) =>
                     data.Select(o => CreatePolygon(o.OfType<JsonElement>().Select(o => o.EnumerateArray().Select(p => p as object).ToList()).ToList())).ToList();
 
-                Polygon CreatePolygon(List<List<object>> points) => 
-                    new Polygon(AssertClosedPolygon(points.Select(CreatePoint)));
+                MyPolygon CreatePolygon(List<List<object>> points) =>
+                    new MyPolygon(AssertClosedPolygon(points.Select(CreatePoint)));
 
                 Point CreatePoint(List<object> values)
                 {
                     var cast = values.Cast<JsonElement>().ToList();
                     return new Point(cast[0].GetDouble(), cast[1].GetDouble());
                 }
-                IEnumerable<Point> AssertClosedPolygon(IEnumerable<Point> points) => points.Any() ? (points.First() != points.Last() ? points.Append(points.First()) : points) : points;
+                IEnumerable<Point> AssertClosedPolygon(IEnumerable<Point> points) => points.Any() ? points.First() != points.Last() ? points.Append(points.First()) : points : points;
             }
-            public bool IsInside(Point pt) => Polygons.Any(o => o.IsPointInside(pt));
+            public bool IsInside(Point pt) => Polygons.Any(o => o.Polygon.IsPointInside(pt));
         }
 
         // from https://json2csharp.com/
