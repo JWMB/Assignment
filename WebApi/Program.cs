@@ -13,6 +13,7 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton<IElectricityPriceService, ElectricityPriceService>();
 builder.Services.AddSingleton<ICoordinateToZoneService, CoordinateToZoneService>();
+builder.Services.AddSingleton<IZoneDefinitionProvider, GeoJsonZoneDefinitionProvider>();
 
 var app = builder.Build();
 
