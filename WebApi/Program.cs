@@ -48,7 +48,7 @@ public readonly record struct Response(decimal Min, decimal Max, decimal Avg, Di
             (decimal)items.Max(getVal),
             (decimal)items.Average(getVal),
             items
-                .GroupBy(o => o.time_start.Hour)
+                .GroupBy(o => o.time_start.Hour) // this method accepts any date range, could be multiple dates - needs grouping
                 .ToDictionary(o => o.Key, o => (decimal)o.Select(getVal).Average())
                 );
     }
