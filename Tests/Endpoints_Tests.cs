@@ -62,19 +62,22 @@ namespace Tests
             content.Max.ShouldBe(currency == Currency.EUR ? 99 : 55);
         }
 
-        [Fact]
-        public async Task Coords_Get_Mocked()
+        [Theory]
+        [InlineData("SE1", 98)]
+        [InlineData("SE2", 97)]
+        public async Task Coords_Get_Mocked(string foundZone, decimal expectedMax)
         {
             // Arrange
             var client = Utils.CreateClient(factory, services => {
                 var priceService = A.Fake<IElectricityPriceService>();
                 A.CallTo(() => priceService.Get(A<DateTime>._, A<string>._))
-                    .Returns(Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(55, 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
+                    .ReturnsLazily((DateTime date, string zone) => 
+                    Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(55, foundZone == zone ? (double)expectedMax : 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
                 services.AddScoped(sp => priceService);
 
                 var coordsService = A.Fake<ICoordinateToZoneService>();
                 A.CallTo(() => coordsService.Get(A<Coordinate>._))
-                    .Returns(Task.FromResult((string?)"SE1"));
+                    .Returns(Task.FromResult((string?)foundZone));
                 services.AddScoped(sp => coordsService);
 
             });
@@ -88,7 +91,7 @@ namespace Tests
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadFromJsonAsync<Response>();
-            content.Max.ShouldBe(99);
+            content.Max.ShouldBe(expectedMax);
         }
     }
 }
