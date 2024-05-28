@@ -1,4 +1,6 @@
 ﻿using GeoLibrary.Model;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace WebApi
 {
@@ -10,13 +12,27 @@ namespace WebApi
 
     public class CoordinateToZoneService : ICoordinateToZoneService
     {
-        public Task<string?> Get(Coordinate coordinate)
+        private List<Converted>? converted;
+        private async Task<List<Converted>> AssertData()
         {
-            var polys = new[] {
-                ("SE1", new Polygon(new[] { new Point(0, 0), new(0, 10), new(10, 10), new(10, 0), new(0, 0) }))
-            };
-            var found = polys.SingleOrDefault(o => o.Item2.IsPointInside(new((double)coordinate.Longitude, (double)coordinate.Latitude)));
-            return Task.FromResult(found.Item2 == default ? null : found.Item1);
+            if (converted == null)
+            {
+                var data = JsonSerializer.Deserialize<Root>(await File.ReadAllTextAsync("Resources/EnergyAreas.geojson"));
+                if (data == null)
+                    throw new Exception("Could not parse data");
+                converted = data.Features.Select(Converted.Create).ToList();
+            }
+            return converted;
+        }
+
+        public async Task<string?> Get(Coordinate coordinate)
+        {
+            var converted = await AssertData();
+            var found = converted.Where(o => o.IsInside(new((double)coordinate.Longitude, (double)coordinate.Latitude))).ToList();
+            if (found.Count > 1)
+                throw new Exception($"Polygons overlapping at {coordinate}"); // should be pre-validation step
+
+            return found.Any() ? $"SE{found.Single().Id}" : null;
         }
 
         public record Converted(string Id, List<Polygon> Polygons)
