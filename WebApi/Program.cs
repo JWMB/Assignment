@@ -12,6 +12,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton<IElectricityPriceService, ElectricityPriceService>();
+builder.Services.AddSingleton<ICoordinateToZoneService, CoordinateToZoneService>();
 
 var app = builder.Build();
 
@@ -27,10 +28,20 @@ app.UseHttpsRedirection();
 app.MapGet("/electricityprice_zone", async ([FromServices] IElectricityPriceService priceService,
     DateTime date, string zone, Response.Currency currency = Response.Currency.EUR) =>
 {
-    var items = await priceService.Get(date, zone);
-    return Response.Create(items, currency);
+    return Response.Create(await priceService.Get(date, zone), currency);
 })
 .WithOpenApi();
+
+app.MapGet("/electricityprice_coords", async ([FromServices] IElectricityPriceService priceService, [FromServices] ICoordinateToZoneService coordinateService,
+    DateTime date, decimal longitude, decimal latitude, Response.Currency currency = Response.Currency.EUR) =>
+{
+    var zone = await coordinateService.Get(new(longitude, latitude));
+    if (zone == null)
+        throw new Exception(""); // System.Net.HttpStatusCode.BadRequest);
+    return Response.Create(await priceService.Get(date, zone), currency);
+})
+.WithOpenApi();
+
 
 app.Run();
 

@@ -61,5 +61,34 @@ namespace Tests
             var content = await response.Content.ReadFromJsonAsync<Response>();
             content.Max.ShouldBe(currency == Currency.EUR ? 99 : 55);
         }
+
+        [Fact]
+        public async Task Coords_Get_Mocked()
+        {
+            // Arrange
+            var client = Utils.CreateClient(factory, services => {
+                var priceService = A.Fake<IElectricityPriceService>();
+                A.CallTo(() => priceService.Get(A<DateTime>._, A<string>._))
+                    .Returns(Task.FromResult(new List<ElectricyPriceRecord> { new ElectricyPriceRecord(55, 99, 1, DateTime.Today.Date, DateTime.Today.Date.AddHours(1)) }));
+                services.AddScoped(sp => priceService);
+
+                var coordsService = A.Fake<ICoordinateToZoneService>();
+                A.CallTo(() => coordsService.Get(A<Coordinate>._))
+                    .Returns(Task.FromResult((string?)"SE1"));
+                services.AddScoped(sp => coordsService);
+
+            });
+
+            var date = DateTime.Today;
+
+            // Act
+            var response = await client.GetAsync($"/electricityprice_coords?date={date:yyyy-MM-dd}&longitude={1}&latitude={1}");
+
+            // Assert
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadFromJsonAsync<Response>();
+            content.Max.ShouldBe(99);
+        }
     }
 }
