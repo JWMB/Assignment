@@ -36,6 +36,7 @@ app.MapGet("/electricityprice_zone", async Task<IResult> ([FromServices] IElectr
     return TypedResults.Ok(Response.Create(data, currency));
 })
 .WithOpenApi()
+.WithDescription("Get electricity prices for a zone for a date, in Euro or SEK")
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
@@ -51,12 +52,13 @@ app.MapGet("/electricityprice_coords", async Task<IResult> ([FromServices] IElec
     return TypedResults.Ok(Response.Create(data, currency));
 })
 .WithOpenApi()
+.WithDescription("Get electricity prices for a coordinate and a date, in Euro or SEK")
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
 .Produces(StatusCodes.Status404NotFound);
 
 app.MapGet("/zones_image", async ([FromServices] IZoneDefinitionProvider zoneDefinitionProvider,
-    [Range(0.1, 100)]
+    [Range(0.1, 100)] // Seem the current OpenAPI implementation ignores these attributes - probably needs custom ISchemaFilter handling
     float sizeXFactor = 1,
     [Range(0.1, 100)]
     float sizeYFactor = 1) =>
@@ -71,7 +73,9 @@ app.MapGet("/zones_image", async ([FromServices] IZoneDefinitionProvider zoneDef
     await img.SaveAsWebpAsync(stream);
     return Results.File(stream.ToArray(), "image/webp");
 })
-.WithOpenApi();
+.WithOpenApi()
+.WithDescription("Generate a map (image) of the electricity zones");
+
 
 
 app.Run();
