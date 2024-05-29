@@ -69,10 +69,9 @@ namespace Tests
             var client = factory.CreateClient();
 
             var date = new DateTime(2024, 1, 1);
-            var coords = new Coordinate(5, 5);
+            var coords = new Coordinate(59, 18);
             // Act
             var response = await client.GetAsync($"/electricityprice_coords?date={date:yyyy-MM-dd}&longitude={coords.Longitude}&latitude={coords.Latitude}");
-
             // Assert
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<Response>();

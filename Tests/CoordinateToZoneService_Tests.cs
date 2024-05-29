@@ -9,14 +9,19 @@ namespace Tests
     public class CoordinateToZoneService_Tests
     {
         [Theory]
-        [InlineData(59.31323397678888, 18.067266038822446, "SE1")] // Stockholm
-        [InlineData(39.31323397678888, 18.067266038822446, null)]
+        [InlineData(59, 18, "SE1")]
+        [InlineData(39, 18, null)]
         [InlineData(0, 0, null)]
         public async Task CoordinateToZoneService_FakeZones(double longitude, double latitude, string? expectedZone)
         {
             var zoneDefinitionProvider = A.Fake<IZoneDefinitionProvider>();
+            // TODO: confusing with type name Point - different libs have different meanings (confusing cartesian x/y vs geographical long/lat)
+            // Use our own representations in exposed methods, convert inside to respective lib's type
+            var points = new[] { new Point(50, 17), new(60, 17), new(60, 19), new(50, 19), new(50, 17) }
+                .Select(o => new Point(o.Latitude, o.Longitude));
+
             A.CallTo(() => zoneDefinitionProvider.Get())
-                .Returns(Task.FromResult(new[] { new CoordinateToZoneService.Converted("SE1", new[] { new MyPolygon(new[] { new Point(50, 17), new(60, 17), new(60, 19), new(50, 19), new(50, 17) }) }.ToList()) }.ToList() ));
+                .Returns(Task.FromResult(new[] { new CoordinateToZoneService.Converted("SE1", new[] { new MyPolygon(points) }.ToList()) }.ToList() ));
 
             var sut = new CoordinateToZoneService(zoneDefinitionProvider);
             var zone = await sut.Get(new((decimal)longitude, (decimal)latitude));
