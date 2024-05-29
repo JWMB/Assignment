@@ -2,7 +2,7 @@
 {
     public interface IElectricityPriceService
     {
-        Task<List<ElectricyPriceRecord>> Get(DateTime date, string zone);
+        Task<List<ElectricyPriceRecord>?> Get(DateTime date, string zone);
     }
 
     // generated using https://json2csharp.com/
@@ -23,17 +23,15 @@
             this.httpClientFactory = httpClientFactory;
         }
 
-        public async Task<List<ElectricyPriceRecord>> Get(DateTime date, string zone)
+        public async Task<List<ElectricyPriceRecord>?> Get(DateTime date, string zone)
         {
             using var client = httpClientFactory.CreateClient();
             var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, $"https://www.elprisetjustnu.se/api/v1/prices/{date.Year}/{date:MM-dd}_{zone}.json "));
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadFromJsonAsync<List<ElectricyPriceRecord>>();
-            if (content == null)
-                throw new Exception("No data");
-
-            return content;
+            return await response.Content.ReadFromJsonAsync<List<ElectricyPriceRecord>>();
         }
     }
 }

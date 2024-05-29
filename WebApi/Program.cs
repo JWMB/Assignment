@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SixLabors.ImageSharp;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,22 +27,33 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/electricityprice_zone", async ([FromServices] IElectricityPriceService priceService,
+app.MapGet("/electricityprice_zone", async Task<IResult> ([FromServices] IElectricityPriceService priceService,
     DateTime date, string zone, Response.Currency currency = Response.Currency.EUR) =>
 {
-    return Response.Create(await priceService.Get(date, zone), currency);
+    var data = await priceService.Get(date, zone);
+    if (data == null)
+        return TypedResults.NotFound();
+    return TypedResults.Ok(Response.Create(data, currency));
 })
-.WithOpenApi();
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
 
-app.MapGet("/electricityprice_coords", async ([FromServices] IElectricityPriceService priceService, [FromServices] ICoordinateToZoneService coordinateService,
+app.MapGet("/electricityprice_coords", async Task<IResult> ([FromServices] IElectricityPriceService priceService, [FromServices] ICoordinateToZoneService coordinateService,
     DateTime date, decimal longitude, decimal latitude, Response.Currency currency = Response.Currency.EUR) =>
 {
     var zone = await coordinateService.Get(new(longitude, latitude));
     if (zone == null)
-        throw new Exception(""); // System.Net.HttpStatusCode.BadRequest);
-    return Response.Create(await priceService.Get(date, zone), currency);
+        return TypedResults.BadRequest($"No zone found for coordinate");
+    var data = await priceService.Get(date, zone);
+    if (data == null)
+        return TypedResults.NotFound($"Missing data for {nameof(zone)}='{zone}' or date");
+    return TypedResults.Ok(Response.Create(data, currency));
 })
-.WithOpenApi();
+.WithOpenApi()
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status404NotFound);
 
 app.MapGet("/zones_image", async ([FromServices] IZoneDefinitionProvider zoneDefinitionProvider,
     [Range(0.1, 100)]
