@@ -1,4 +1,4 @@
-﻿namespace WebApi
+﻿namespace WebApi.Services
 {
     public interface IElectricityPriceService
     {
