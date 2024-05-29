@@ -51,7 +51,7 @@ namespace WebApi.Services
         public async Task<string?> Get(Coordinate coordinate)
         {
             var converted = await zoneDefinitionProvider.Get();
-            var found = converted.Where(o => o.IsInside(new((double)coordinate.Longitude, (double)coordinate.Latitude))).ToList();
+            var found = converted.Where(o => o.IsInside(new((double)coordinate.Latitude, (double)coordinate.Longitude))).ToList();
             if (found.Count > 1)
                 throw new Exception($"Polygons overlapping at {coordinate}"); // should be pre-validation step
 
