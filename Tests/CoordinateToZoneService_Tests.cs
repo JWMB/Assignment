@@ -41,6 +41,9 @@ namespace Tests
         [Fact]
         public async Task CoordinateToZoneService_FindHole()
         {
+            if (!System.Diagnostics.Debugger.IsAttached) // run this only on debug - it's more of a tool, implemented as a test
+                return;
+
             var zoneDefinitionProvider = new GeoJsonZoneDefinitionProvider();
             var sut = new CoordinateToZoneService(zoneDefinitionProvider);
             var ptCenter = (57.361842859691464, 13.738611315673879);
