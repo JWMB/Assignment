@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.ImageSharp;
 using System;
-using WebApi;
+using System.ComponentModel.DataAnnotations;
+using System.Text;
+using WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +43,24 @@ app.MapGet("/electricityprice_coords", async ([FromServices] IElectricityPriceSe
     if (zone == null)
         throw new Exception(""); // System.Net.HttpStatusCode.BadRequest);
     return Response.Create(await priceService.Get(date, zone), currency);
+})
+.WithOpenApi();
+
+app.MapGet("/zones_image", async ([FromServices] IZoneDefinitionProvider zoneDefinitionProvider,
+    [Range(0.1, 100)]
+    float sizeXFactor = 1,
+    [Range(0.1, 100)]
+    float sizeYFactor = 1) =>
+{
+    var zones = await zoneDefinitionProvider.Get();
+    if (zones == null)
+        throw new Exception("");
+    var allPolygons = zones.SelectMany(o => o.Polygons);
+    // TODO: check final size before rendering (attack vector / memory use)
+    using var img = PolygonRenderer.Render(allPolygons.Select(o => o.Points), (sizeXFactor, sizeYFactor));
+    using var stream = new MemoryStream();
+    await img.SaveAsWebpAsync(stream);
+    return Results.File(stream.ToArray(), "image/webp");
 })
 .WithOpenApi();
 
